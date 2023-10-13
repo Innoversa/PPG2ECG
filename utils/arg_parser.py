@@ -38,14 +38,10 @@ def sicong_argparse(model: str) -> argparse.Namespace:
         argparse.Namespace -- _description_
     """
     try:
-        model_desc_dict = {
-            "Sequnet": "Sicong's Sequence U-Net Approach to MIMIC Arterial Blood Pressure Sequene Modeling",
-            "Transformer": "Zhale's Transformer Approach to MIMIC Arterial Blood Pressure Sequene Modeling",
-            "Cycle_GAN": "Mahrabadi 2022 Baseline Approach of Cycle GAN, published on EMBC 2022 ",
-        }
+        model_desc_dict = {"PPG2ECG": "Generating ECG from PPG using ArterialNet"}
         if model not in model_desc_dict:
             raise RuntimeError(
-                "Model Unknown, only 'Sequnet' and 'Transformer' are available at this time"
+                f"Model Unknown, Accept keywords are: {list(model_desc_dict.keys())}"
             )
         parser = argparse.ArgumentParser(description=model_desc_dict[model])
         parser.add_argument(

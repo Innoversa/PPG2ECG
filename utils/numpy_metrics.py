@@ -7,6 +7,7 @@ from sklearn.metrics import (
 )
 import numpy as np
 
+
 # define loss functions
 def mean_accuracy(logits: list, y: list) -> float:
     return accuracy_score(logits, y)
