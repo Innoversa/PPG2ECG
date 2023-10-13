@@ -41,7 +41,7 @@ def ppg2ecg_argparse(model: str) -> argparse.Namespace:
         model_desc_dict = {"PPG2ECG": "Generating ECG from PPG using ArterialNet"}
         if model not in model_desc_dict:
             raise RuntimeError(
-                f"Model Unknown, Accept keywords are: {list(model_desc_dict.keys())}"
+                f"Model Unknown, Accept keywords are: {list(model_desc_dict.keys())}\n"
             )
         parser = argparse.ArgumentParser(description=model_desc_dict[model])
         parser.add_argument(
@@ -230,9 +230,12 @@ def ppg2ecg_argparse(model: str) -> argparse.Namespace:
         return flags
     except Exception as error_msg:
         print(error_msg)
-        su.email_func(subject="ArgumentParser Failed", message=f"{error_msg}")
+        su.email_func(
+            subject="ArgumentParser Failed",
+            message=f"Encountered the following error:\n{error_msg}",
+        )
 
 
 if __name__ == "__main__":
     flags = ppg2ecg_argparse("PPG2ECG")
-    print("This main func is used for testing purpose only")
+    print("This main func is just used for testing purpose only")
