@@ -23,9 +23,9 @@ def str2bool(v: str) -> bool:
     return v.lower() in ("yes", "true", "y", "t", "1")
 
 
-def sicong_argparse(model: str) -> argparse.Namespace:
+def ppg2ecg_argparse(model: str) -> argparse.Namespace:
     """
-    sicong_argparse
+    ppg2ecg_argparse
         parsing command line arguments with reinforced formats
 
     Arguments:
@@ -234,5 +234,5 @@ def sicong_argparse(model: str) -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    flags = sicong_argparse("Transformer")
+    flags = ppg2ecg_argparse("PPG2ECG")
     print("This main func is used for testing purpose only")

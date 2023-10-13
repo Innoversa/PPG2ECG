@@ -19,7 +19,7 @@ import warnings
 # importing my own utility functions
 sys.path.append("utils/")
 sys.path.append("models/")
-from utils.arg_parser import sicong_argparse
+from utils.arg_parser import ppg2ecg_argparse
 from utils.visual_combine import MIMIC_Visual
 import utils.seq2seq_utils as zu
 from models.arterialnet import Sequnet as SeqUNet
@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 
 if __name__ == "__main__":
     # getting arguments
-    flags = sicong_argparse("Sequnet")
+    flags = ppg2ecg_argparse("Sequnet")
     # extracting datasets
     print(zu.pretty_progress_bar("Loading data with MIMIC_dataloader"))
     x_train, y_train, x_test, y_test, flags = zu.MIMIC_dataloader(flags)
