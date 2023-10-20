@@ -5,6 +5,7 @@ import os, glob, pdb
 import numpy as np
 import matplotlib.pyplot as plt
 from pandas.plotting import register_matplotlib_converters
+import torch
 
 register_matplotlib_converters()
 from scipy.signal import find_peaks, peak_prominences
@@ -179,8 +180,6 @@ def MIMIC_dataloader(flags: argparse.Namespace, override_sel_subject=None):
     print(pretty_progress_bar("Loading Waveforms from CSV files"))
     # pdb.set_trace()
     if os.path.exists(f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ppg.pt"):
-        import torch
-
         X_data = torch.load(
             f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ppg.pt"
         )
@@ -218,7 +217,7 @@ def MIMIC_dataloader(flags: argparse.Namespace, override_sel_subject=None):
             # removing inconsistent window lapping
             batched_arr = drop_inconsistent_windows(batched_arr, thre=13)
             # batch into data available
-            X_data, y_data = make_batched_data(batched_arr, flags)
+            X_data, y_data, ecg_data = make_batched_data(batched_arr, flags)
     # Shuffling data before train/test split
     if flags.shuffle_data:
         shuffled_indices = np.arange(len(X_data))
@@ -494,7 +493,8 @@ def form_sliding_window(waveform_df, win_size=256, overlap=64):
 
 def make_batched_data_cardiac_cycle(batched_arr, flags):
     """make_batched_data_cardiac_cycle
-        (cardiac cycle version) Assigning PPG and ABP data into torch ready train/test pairs
+        (cardiac cycle version) Assigning PPG and ECG data into torch ready train/test pairs
+        This is permuated version of original ArterialNet, that includes ECG data
 
     Arguments:
         batched_arr {list} -- list of dictionaries based on windows
@@ -508,27 +508,14 @@ def make_batched_data_cardiac_cycle(batched_arr, flags):
     y = []
     for batch in batched_arr:
         if len(batch["PPG"]) == flags.num_prev_cardiac_cycle_feature * 50:
-            if flags.model_used == "Sequnet":
-                feat = batch["PPG"]
-            else:
-                feat = np.concatenate(
-                    (batch["PPG"].reshape(-1, 1), batch["ECG"].reshape(-1, 1)), axis=1
-                )
+            feat = np.concatenate(
+                (batch["PPG"].reshape(-1, 1), batch["ECG"].reshape(-1, 1)), axis=1
+            )
             X.append(feat)
             y.append(batch["ABP"])
     print(np.array(X).shape)
-    if flags.model_used == "Sequnet":
-        import torch
-
-        X = np.array(X).reshape(-1, 1, flags.num_prev_cardiac_cycle_feature * 50)
-        y = np.array(y).reshape(-1, 1, flags.num_prev_cardiac_cycle_label * 50)
-        X = torch.from_numpy(X).float()
-        y = torch.from_numpy(y).float()
-    elif flags.model_used == "Transformer":
-        X = np.array(X)
-        y = np.array(y)
-    else:
-        raise Exception(f"[Sicong] Unknown Value: flags.model_used:{flags.model_used}")
+    X = np.array(X)
+    y = np.array(y)
 
     if flags.shuffle_data:
         shuffled_indices = np.arange(len(X))
@@ -541,41 +528,31 @@ def make_batched_data_cardiac_cycle(batched_arr, flags):
 
 def make_batched_data(batched_arr, flags):
     """make_batched_data
-        Assigning PPG and ABP data into torch ready train/test pairs
+        Assigning PPG, ECG and ABP data into torch ready train/test pairs
+        This is a permuted data from original ArterialNet, with addition of extracting ECG
 
     Arguments:
         batched_arr {list} -- list of dictionaries based on windows
         flags {flag} -- list of arg parsed flags
 
     Returns:
-        torch.tensor -- torch array of input features
-        torch.tensor -- torch array of ground truth labels
+        torch.tensor -- torch array of input PPG features
+        torch.tensor -- torch array of ground truth ABP labels
+        torch.tensor -- torch array of ECG features
     """
     X = []
     y = []
     for batch in batched_arr:
         if len(batch["PPG"]) == flags.win_size:
-            if flags.model_used == "Sequnet":
-                feat = batch["PPG"]
-            else:
-                feat = np.concatenate(
-                    (batch["PPG"].reshape(-1, 1), batch["ECG"].reshape(-1, 1)), axis=1
-                )
+            feat = np.concatenate(
+                (batch["PPG"].reshape(-1, 1), batch["ECG"].reshape(-1, 1)), axis=1
+            )
             X.append(feat)
             y.append(batch["ABP"])
-    print(np.array(X).shape)
-    if flags.model_used == "Sequnet":
-        import torch
 
-        X = np.array(X).reshape(-1, 1, flags.win_size)
-        y = np.array(y).reshape(-1, 1, flags.win_size)
-        X = torch.from_numpy(X).float()  # stay at cpu to that gpu don't get overloaded
-        y = torch.from_numpy(y).float()
-    elif flags.model_used == "Transformer":
-        X = np.array(X)
-        y = np.array(y)
-    else:
-        raise Exception(f"[Sicong] Unknown Value: flags.model_used:{flags.model_used}")
+    print(np.array(X).shape)
+    X = np.array(X)
+    y = np.array(y)
 
     if flags.shuffle_data:
         shuffled_indices = np.arange(len(X))
