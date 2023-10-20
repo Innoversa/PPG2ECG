@@ -163,3 +163,4 @@ cython_debug/
 *.pt
 *.npy
 plot_dir/
+wandb/

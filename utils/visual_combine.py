@@ -81,7 +81,7 @@ def plot_waveform(
         ]
         for i, t in enumerate(local_metrics):
             x_pos = int(x_axis[-1] * 0.95)
-            y_pos = 60 - (i * 5)
+            y_pos = 1 - (i * 0.1)
             ax.text(x_pos, y_pos, t, color="k", fontsize=10)
     ax.set_xlabel(x_lab)
     ax.set_ylabel(y_lab)
