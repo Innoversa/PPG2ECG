@@ -20,7 +20,7 @@ import warnings
 sys.path.append("utils/")
 sys.path.append("models/")
 from utils.arg_parser import ppg2ecg_argparse
-from utils.visual_combine import MIMIC_Visual
+from utils.visual_combine import PPG2ECG_Visual
 import utils.seq2seq_utils as zu
 from models.arterialnet import DilatedCNN, TransformerModel, Sequnet as SeqUNet
 from utils import torch_metrics
@@ -128,7 +128,7 @@ def train_epoch(
     return entire_epoch_preds, optimizer
 
 
-def train_sequnet(x_train, y_train, x_norm, y_norm, net, flags):
+def train_arterialnet(x_train, y_train, x_norm, y_norm, net, flags):
     # define optimization method
     optimizer = optim.Adam(
         net.parameters(),
@@ -192,7 +192,7 @@ def train_sequnet(x_train, y_train, x_norm, y_norm, net, flags):
     return net
 
 
-def test_sequnet(x_test, y_test, x_norm, y_norm, net, flags):
+def test_arterialnet(x_test, y_test, x_norm, y_norm, net, flags):
     # Test setting
     with torch.no_grad():
         preds = torch.tensor([])
@@ -243,43 +243,9 @@ def reconstruct_waveform(y_test, preds):
         y_test_reshaped = y_test.to("cpu").numpy().reshape(-1)
         preds_reshaped = preds.to("cpu").numpy().reshape(-1)
     preds_reshaped_smoothed = zu.smoothing(preds_reshaped)
-    start_length_to_find = 0
-    end_length_to_find = len(preds_reshaped_smoothed)
-    peaks_y_test, _ = find_peaks(
-        y_test_reshaped[start_length_to_find:end_length_to_find], distance=50, height=80
-    )
-    valleys_y_test, _ = find_peaks(
-        -y_test_reshaped[start_length_to_find:end_length_to_find],
-        distance=50,
-        height=-100,
-    )
-    preds_sbp = []
-    for peak in peaks_y_test:
-        min_st = max(0, peak - 10)
-        max_ed = min(len(preds_reshaped_smoothed), peak + 10)
-        preds_sbp.append(np.max(preds_reshaped_smoothed[min_st:max_ed]))
-    preds_dbp = []
-    for valley in valleys_y_test:
-        min_st = max(0, valley - 10)
-        max_ed = min(len(preds_reshaped_smoothed), valley + 10)
-        preds_dbp.append(np.min(preds_reshaped_smoothed[min_st:max_ed]))
-
-    # Visualization stuff
-    result_sbp = pd.DataFrame()
-    result_sbp["SBP_GT"] = y_test_reshaped[peaks_y_test]
-    result_sbp["SBP_pred"] = preds_sbp
-    result_dbp = pd.DataFrame()
-    result_dbp["DBP_GT"] = y_test_reshaped[valleys_y_test]
-    result_dbp["DBP_pred"] = preds_dbp
-    # result_sbp = result_sbp[(result_sbp["SBP_GT"] > 80) & (result_sbp["SBP_GT"] < 200)]
-    # result_dbp = result_dbp[(result_dbp["DBP_GT"] > 20) & (result_dbp["DBP_GT"] < 120)]
     wf_dict = {
-        "abp_pred": preds_reshaped_smoothed,
-        "abp_test": y_test_reshaped,
-        "sbp_pred": result_sbp["SBP_pred"].to_numpy(),
-        "sbp_test": result_sbp["SBP_GT"].to_numpy(),
-        "dbp_pred": result_dbp["DBP_pred"].to_numpy(),
-        "dbp_test": result_dbp["DBP_GT"].to_numpy(),
+        "ecg_pred": preds_reshaped_smoothed,
+        "ecg_test": y_test_reshaped,
     }
     return wf_dict
 
@@ -293,10 +259,10 @@ def visualization(
     log_dict,
 ) -> None:
     # declaring Visualization Class
-    MV = MIMIC_Visual(
+    MV = PPG2ECG_Visual(
         wf_dict,
         patient_name=f"{flags.sel_subject}({flags.subject_id})",
-        model_name="Seq-U-Net",
+        model_name=flags.model_used,
         use_wandb=flags.use_wandb,
     )
     overall_visual_dict = MV.plot_everything()
@@ -305,9 +271,9 @@ def visualization(
         log_dict.update(overall_visual_dict)
         log_dict.update(
             {
-                "ABP_RMSE": waveform_rmse,
-                "ABP_MAE": waveform_mae,
-                "ABP_Pearson": waveform_pearson,
+                "ECG_RMSE": waveform_rmse,
+                "ECG_MAE": waveform_mae,
+                "ECG_Pearson": waveform_pearson,
                 "trained_epoch": flags.epochs,
             }
         )
@@ -315,34 +281,18 @@ def visualization(
         wandb.join()
     else:
         # testing visualization
-        overall_visual_dict["SBP_Bland_Altman"].savefig("plot_dir/SBP_bland_altman.png")
-        overall_visual_dict["DBP_Bland_Altman"].savefig("plot_dir/DBP_bland_altman.png")
-        overall_visual_dict["SBP_Confusion_Matrix"].savefig(
-            "plot_dir/SBP_confusion_matrix.png"
+        overall_visual_dict["ECG_Waveform"].savefig("plot_dir/ECG_visual_test.png")
+        overall_visual_dict["ECG_Three_Waveform"].savefig(
+            "plot_dir/ECG_Three_visual_test.png"
         )
-        overall_visual_dict["DBP_Confusion_Matrix"].savefig(
-            "plot_dir/DBP_confusion_matrix.png"
-        )
-        overall_visual_dict["ABP_Waveform"].savefig("plot_dir/ABP_visual_test.png")
-        overall_visual_dict["ABP_Three_Waveform"].savefig(
-            "plot_dir/ABP_Three_visual_test.png"
-        )
-        overall_visual_dict["SBP_Waveform"].savefig("plot_dir/SBP_visual_test.png")
-        overall_visual_dict["DBP_Waveform"].savefig("plot_dir/DBP_visual_test.png")
-        print(f"ABP_RMSE=={waveform_rmse}")
-        print(f"ABP_MAE=={waveform_mae}")
-        print(f"ABP_Pearson=={waveform_pearson}")
-        print(f"SBP_RMSE=={overall_visual_dict['SBP_RMSE']}")
-        print(f"SBP_MAE=={overall_visual_dict['SBP_MAE']}")
-        print(f"SBP_Pearson=={overall_visual_dict['SBP_Pearson']}")
-        print(f"DBP_RMSE=={overall_visual_dict['DBP_RMSE']}")
-        print(f"DBP_MAE=={overall_visual_dict['DBP_MAE']}")
-        print(f"DBP_Pearson=={overall_visual_dict['DBP_Pearson']}")
+        print(f"ECG_RMSE=={waveform_rmse}")
+        print(f"ECG_MAE=={waveform_mae}")
+        print(f"ECG_Pearson=={waveform_pearson}")
 
 
 if __name__ == "__main__":
     # getting arguments
-    flags = ppg2ecg_argparse("Sequnet")
+    flags = ppg2ecg_argparse("PPG2ECG")
     # extracting datasets
     print(zu.pretty_progress_bar("Loading data with MIMIC_dataloader"))
     x_train, y_train, x_test, y_test, flags = zu.MIMIC_dataloader(flags)
@@ -350,7 +300,7 @@ if __name__ == "__main__":
     x_norm = zu.Sicong_Norm(x_train.detach())
     y_norm = zu.Sicong_Norm(y_train.detach())
     # define the UNet Model as the backbone of the dilated CNN
-    print(zu.pretty_progress_bar("Initializing SeqUNet"))
+    print(zu.pretty_progress_bar("Initializing Transformer"))
     snet = TransformerModel(
         input_size=256,
         output_size=256,
@@ -378,10 +328,10 @@ if __name__ == "__main__":
         )
         wandb.config.update(flags)
     log_dict = {}
-    print(zu.pretty_progress_bar("Training SeqUNet"))
-    net = train_sequnet(x_train, y_train, x_norm, y_norm, net, flags)
-    print(zu.pretty_progress_bar("Testing SeqUNet"))
-    net, preds, waveform_rmse, waveform_mae, waveform_pearson = test_sequnet(
+    print(zu.pretty_progress_bar("Training Transformer"))
+    net = train_arterialnet(x_train, y_train, x_norm, y_norm, net, flags)
+    print(zu.pretty_progress_bar("Testing Transformer"))
+    net, preds, waveform_rmse, waveform_mae, waveform_pearson = test_arterialnet(
         x_test, y_test, x_norm, y_norm, net, flags
     )
     wf_dict = reconstruct_waveform(y_test, preds)

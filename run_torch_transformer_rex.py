@@ -20,7 +20,7 @@ import warnings
 sys.path.append("utils/")
 sys.path.append("models/")
 from utils.arg_parser import ppg2ecg_argparse
-from utils.visual_combine import MIMIC_Visual
+from utils.visual_combine import PPG2ECG_Visual
 import utils.seq2seq_utils as zu
 from models.arterialnet import Sequnet as SeqUNet
 from models.arterialnet import DilatedCNN
@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 
 if __name__ == "__main__":
     # getting arguments
-    flags = ppg2ecg_argparse("Sequnet")
+    flags = ppg2ecg_argparse("PPG2ECG")
     # extracting datasets
     print(zu.pretty_progress_bar("Loading data with MIMIC_dataloader"))
     x_train, y_train, x_test, y_test, flags = zu.MIMIC_dataloader(flags)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     if flags.save_result and criteria < 10:
         model_name = (
             flags.seq_result_dir
-            + f"/sequnet_subject{flags.subject}_rmse_{criteria:.3f}.pt"
+            + f"sequnet_subject{flags.subject}_rmse_{criteria:.3f}.pt"
         )
         torch.save(net, model_name)
         print("saving good results")

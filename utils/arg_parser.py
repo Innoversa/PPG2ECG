@@ -217,7 +217,7 @@ def ppg2ecg_argparse(model: str) -> argparse.Namespace:
         )
         parser.add_argument(
             "--rex_torch_path",
-            default="/home/grads/s/siconghuang/REx_candidate_torch_tensors/",
+            default="/data/datasets/GuidedAttnDataset/7_days/REx_candidate_torch_tensors/PPG2ECG/",
             help="The path to saved MIMIC datasets for REx in torch tensors (depends on the server)",
         )
         parser = rp.rex_argparse(parser)
@@ -231,7 +231,7 @@ def ppg2ecg_argparse(model: str) -> argparse.Namespace:
     except Exception as error_msg:
         print(error_msg)
         su.email_func(
-            subject="ArgumentParser Failed",
+            subject=" ArgumentParser Failed",
             message=f"Encountered the following error:\n{error_msg}",
         )
 

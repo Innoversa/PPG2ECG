@@ -20,7 +20,8 @@ import phase_alignment as pa
 # Compatibility layer between Python 2 and Python 3
 from scipy.signal import firwin, lfilter, resample
 import math
-from arg_parser import sicong_argparse
+
+from arg_parser import ppg2ecg_argparse
 import argparse
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_squared_error
@@ -177,16 +178,20 @@ def MIMIC_dataloader(flags: argparse.Namespace, override_sel_subject=None):
     flags.subject_id = get_subject_id_from_str(flags.subject)
     print(f"Selected Subject Name == {flags.subject}")
     # loading selected subject's waveform into dataframe
-    print(pretty_progress_bar("Loading Waveforms from CSV files"))
     # pdb.set_trace()
+    print(pretty_progress_bar("Loading Waveforms from pre-processed Pytorch files"))
     if os.path.exists(f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ppg.pt"):
         X_data = torch.load(
             f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ppg.pt"
         )
         y_data = torch.load(
-            f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_abp.pt"
+            f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ecg.pt"
         )
+        if len(X_data.shape) == 2:
+            X_data = X_data.reshape(len(X_data), 1, -1)
+            y_data = y_data.reshape(len(y_data), 1, -1)
     else:
+        print(pretty_progress_bar("Loading Waveforms from CSV files"))
         wdf = pd.read_csv(flags.data_path + flags.subject + "/waveforms.csv")
         # for more rapid results
         if flags.run_portion < 1:
@@ -217,7 +222,16 @@ def MIMIC_dataloader(flags: argparse.Namespace, override_sel_subject=None):
             # removing inconsistent window lapping
             batched_arr = drop_inconsistent_windows(batched_arr, thre=13)
             # batch into data available
-            X_data, y_data, ecg_data = make_batched_data(batched_arr, flags)
+            X_data, y_data = make_batched_data(batched_arr, flags)
+        X_data = torch.from_numpy(X_data).float()
+        y_data = torch.from_numpy(y_data).float()
+        print(pretty_progress_bar("Saving processed Waveforms as torch files"))
+        torch.save(
+            X_data, f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ppg.pt"
+        )
+        torch.save(
+            y_data, f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ecg.pt"
+        )
     # Shuffling data before train/test split
     if flags.shuffle_data:
         shuffled_indices = np.arange(len(X_data))
@@ -494,7 +508,7 @@ def form_sliding_window(waveform_df, win_size=256, overlap=64):
 def make_batched_data_cardiac_cycle(batched_arr, flags):
     """make_batched_data_cardiac_cycle
         (cardiac cycle version) Assigning PPG and ECG data into torch ready train/test pairs
-        This is permuated version of original ArterialNet, that includes ECG data
+        This is permuated version of original ArterialNet, that includes ECG data as output
 
     Arguments:
         batched_arr {list} -- list of dictionaries based on windows
@@ -508,12 +522,9 @@ def make_batched_data_cardiac_cycle(batched_arr, flags):
     y = []
     for batch in batched_arr:
         if len(batch["PPG"]) == flags.num_prev_cardiac_cycle_feature * 50:
-            feat = np.concatenate(
-                (batch["PPG"].reshape(-1, 1), batch["ECG"].reshape(-1, 1)), axis=1
-            )
-            X.append(feat)
-            y.append(batch["ABP"])
-    print(np.array(X).shape)
+            X.append(batch["PPG"])
+            y.append(batch["ECG"])
+    print(f"{np.array(X).shape}")
     X = np.array(X)
     y = np.array(y)
 
@@ -544,11 +555,8 @@ def make_batched_data(batched_arr, flags):
     y = []
     for batch in batched_arr:
         if len(batch["PPG"]) == flags.win_size:
-            feat = np.concatenate(
-                (batch["PPG"].reshape(-1, 1), batch["ECG"].reshape(-1, 1)), axis=1
-            )
-            X.append(feat)
-            y.append(batch["ABP"])
+            X.append(batch["PPG"])
+            y.append(batch["ECG"])
 
     print(np.array(X).shape)
     X = np.array(X)
@@ -799,6 +807,6 @@ if __name__ == "__main__":
     # plt.title(f"noise_rate=={noise_rate}")
     # plt.legend(loc=1)
     # new_ppg = get_motion_artifact_ppg(out_fs=125)
-    flags = sicong_argparse(model="Sequnet")
+    flags = ppg2ecg_argparse(model="PPG2ECG")
     sub = get_selected_subject(flags, override_sel_subject=6)
     # pdb.set_trace()
