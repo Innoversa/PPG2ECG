@@ -9,27 +9,27 @@ import seaborn as sns
 import pdb
 
 
-def form_dict(bp_key, fig, rmse, mae, mean, std, rval, pval):
+def form_dict(ecg_key, fig, rmse, mae, mean, std, rval, pval):
     """form_dict
         Make dictionary from bland_altman and other statistics
 
     Arguments:
-        bp_key {str} -- whether ABP, SBP, or DBP, used to make key for dictionary
+        ecg_key {str} -- whether ABP, SBP, or DBP, used to make key for dictionary
         fig {pyplot_figure} -- bland altman plot
         rmse {float} -- Rooted Mean Squared Error, the lower the better
         mae {float} -- Mean Absolute Error, the lower the better
         rval {float} -- Pearon's R value, between 0~1, the higher the better
 
     Returns:
-        {dictionary} -- dictionary containing figure and metrics of given bp_key
+        {dictionary} -- dictionary containing figure and metrics of given ecg_key
     """
     return {
-        f"{bp_key}_RMSE": rmse,
-        f"{bp_key}_MAE": mae,
-        f"{bp_key}_MEAN": mean,
-        f"{bp_key}_STD": std,
-        f"{bp_key}_Pearson": rval,
-        f"{bp_key}_Bland_Altman": fig,
+        f"{ecg_key}_RMSE": rmse,
+        f"{ecg_key}_MAE": mae,
+        f"{ecg_key}_MEAN": mean,
+        f"{ecg_key}_STD": std,
+        f"{ecg_key}_Pearson": rval,
+        f"{ecg_key}_Bland_Altman": fig,
     }
 
 
@@ -147,7 +147,7 @@ def plot_three_waveform(
                 f"std={std:.3f}",
             ]
             for j, t in enumerate(local_metrics):
-                x_pos = x_axis[int(len(x_axis) * 0.055)]
+                x_pos = 0 - x_axis[int(len(x_axis) * 0.055)]
                 y_pos = 0.4 - (j * 0.15)
                 ax[i].text(
                     x_pos,
@@ -200,7 +200,7 @@ class PPG2ECG_Visual:
         self.patient_name = patient_name
         self.model_name = model_name
         self.freq = sampled_freq
-        self.bp_dict = {"ECG": "Lead II ECG"}
+        self.ecg_dict = {"ECG": "Lead II ECG"}
         self.use_wandb = use_wandb
         self.PPG2ECG_Visual_dict = {}
 
@@ -233,18 +233,18 @@ class PPG2ECG_Visual:
     #     Returns:
     #         dict -- returning a dictionary containing desired visuliazation
     #     """
-    #     bp_key = ecg_type.upper()
+    #     ecg_key = ecg_type.upper()
     #     fig, rmse, mae, mean, std, rval, pval = plot_bland_altman(
-    #         pred_arr=self.pred_dict[bp_key],
-    #         test_arr=self.test_dict[bp_key],
-    #         title=f"{self.bp_dict[bp_key]} Bland Altman for\nPatient: {self.patient_name}",
-    #         ecg_type=bp_key,
+    #         pred_arr=self.pred_dict[ecg_key],
+    #         test_arr=self.test_dict[ecg_key],
+    #         title=f"{self.ecg_dict[ecg_key]} Bland Altman for\nPatient: {self.patient_name}",
+    #         ecg_type=ecg_key,
     #         return_plt=True,
     #     )
     #     fig = self.fig_to_wandb_image(
-    #         fig, caption=f"{self.bp_dict[bp_key]}_Bland_Altman"
+    #         fig, caption=f"{self.ecg_dict[ecg_key]}_Bland_Altman"
     #     )
-    #     return form_dict(bp_key, fig, rmse, mae, mean, std, rval, pval)
+    #     return form_dict(ecg_key, fig, rmse, mae, mean, std, rval, pval)
 
     def plot_Prediction(
         self, ecg_type, vis_st_idx=0, vis_seq_len=1250, add_metrics=False
@@ -265,27 +265,27 @@ class PPG2ECG_Visual:
         Returns:
             dict -- returning a dictionary containing desired visuliazation
         """
-        bp_key = ecg_type.upper()
-        x_lab = "Time (seconds)" if bp_key == "ECG" else "Data Points (# of Samples)"
-        freq = self.freq if bp_key == "ECG" else 1
+        ecg_key = ecg_type.upper()
+        x_lab = "Time (seconds)" if ecg_key == "ECG" else "Data Points (# of Samples)"
+        freq = self.freq if ecg_key == "ECG" else 1
         st_idx = max(0, vis_st_idx)
-        ed_idx = min(len(self.pred_dict[bp_key]), vis_st_idx + vis_seq_len)
+        ed_idx = min(len(self.pred_dict[ecg_key]), vis_st_idx + vis_seq_len)
         print(
-            f"st_idx: {st_idx}, ed_idx: {ed_idx}, print_len = {len(self.test_dict[bp_key])}"
+            f"st_idx: {st_idx}, ed_idx: {ed_idx}, print_len = {len(self.test_dict[ecg_key])}"
         )
         wave_fig, ax = plot_waveform(
-            pred_arr=self.pred_dict[bp_key][st_idx:ed_idx],
-            test_arr=self.test_dict[bp_key][st_idx:ed_idx],
+            pred_arr=self.pred_dict[ecg_key][st_idx:ed_idx],
+            test_arr=self.test_dict[ecg_key][st_idx:ed_idx],
             freq=freq,  # Match frequency for A, else point by point
             x_lab=x_lab,
-            y_lab=f"{self.bp_dict[bp_key]} (mmHg)",
-            title=f"{self.model_name.upper()} {self.bp_dict[bp_key]} Prediction for\nPatient: {self.patient_name}",
+            y_lab=f"{self.ecg_dict[ecg_key]} (mV)",
+            title=f"{self.model_name.upper()} {self.ecg_dict[ecg_key]} Prediction for\nPatient: {self.patient_name}",
             add_metrics=add_metrics,
         )
         wave_fig = self.fig_to_wandb_image(
-            wave_fig, caption=f"{self.bp_dict[bp_key]}_Prediction"
+            wave_fig, caption=f"{self.ecg_dict[ecg_key]}_Prediction"
         )
-        return {f"{bp_key}_Waveform": wave_fig}
+        return {f"{ecg_key}_Waveform": wave_fig}
 
     def plot_three_Predictions(
         self, ecg_type, vis_st_idx=0, vis_seq_len=1250, add_metrics=False
@@ -306,34 +306,34 @@ class PPG2ECG_Visual:
         Returns:
             dict -- returning a dictionary containing desired visuliazation
         """
-        bp_key = ecg_type.upper()
-        x_lab = "Time (seconds)" if bp_key == "ABP" else "Data Points (# of Samples)"
-        freq = self.freq if bp_key == "ABP" else 1
+        ecg_key = ecg_type.upper()
+        x_lab = "Time (seconds)" if ecg_key == "ABP" else "Data Points (# of Samples)"
+        freq = self.freq if ecg_key == "ABP" else 1
         pred_list = []
         test_list = []
-        vis_seq_len = min(vis_seq_len, int(len(self.pred_dict[bp_key]) / 3))
+        vis_seq_len = min(vis_seq_len, int(len(self.pred_dict[ecg_key]) / 3))
         for i in range(3):
             st_idx = max(0, vis_st_idx) + i * vis_seq_len
             ed_idx = (
-                min(len(self.pred_dict[bp_key]), vis_st_idx + vis_seq_len)
+                min(len(self.pred_dict[ecg_key]), vis_st_idx + vis_seq_len)
                 + i * vis_seq_len
             )
-            pred_list.append(self.pred_dict[bp_key][st_idx:ed_idx])
-            test_list.append(self.test_dict[bp_key][st_idx:ed_idx])
+            pred_list.append(self.pred_dict[ecg_key][st_idx:ed_idx])
+            test_list.append(self.test_dict[ecg_key][st_idx:ed_idx])
             print(f"st_idx: {st_idx}, ed_idx: {ed_idx}")
         wave_fig, ax = plot_three_waveform(
             pred_arr_list=pred_list,
             test_arr_list=test_list,
             freq=freq,  # Match frequency for A, else point by point
             x_lab=x_lab,
-            y_lab=f"{self.bp_dict[bp_key]} (mmHg)",
-            title=f"{self.model_name.upper()} {self.bp_dict[bp_key]} Prediction for\nPatient: {self.patient_name}",
+            y_lab=f"{self.ecg_dict[ecg_key]} (mV)",
+            title=f"{self.model_name.upper()} {self.ecg_dict[ecg_key]} Prediction for\nPatient: {self.patient_name}",
             add_metrics=add_metrics,
         )
         wave_fig = self.fig_to_wandb_image(
-            wave_fig, caption=f"{self.bp_dict[bp_key]}_Prediction"
+            wave_fig, caption=f"{self.ecg_dict[ecg_key]}_Prediction"
         )
-        return {f"{bp_key}_Three_Waveform": wave_fig}
+        return {f"{ecg_key}_Three_Waveform": wave_fig}
 
     def plot_everything(self):
         """plot_everything
