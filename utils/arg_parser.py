@@ -170,7 +170,7 @@ def ppg2ecg_argparse(model: str) -> argparse.Namespace:
         parser.add_argument(
             "--wandb_project",
             type=str,
-            default="Seq_U-Net_MIMIC",
+            default="PPG2ECG-MIMIC-CarDs",
             help="If using Wandb, this shows the location of the project, usually don't change this one",
         )
         parser.add_argument(
