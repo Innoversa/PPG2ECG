@@ -100,7 +100,7 @@ def plot_three_waveform(
     x_lab="default_x",
     y_lab="default_y",
     plot_style=".-.",
-    add_metrics=False,
+    add_metrics=True,
 ):
     """plot_three_waveforms
         Plotting 3 plots between pred and test
@@ -147,8 +147,8 @@ def plot_three_waveform(
                 f"std={std:.3f}",
             ]
             for j, t in enumerate(local_metrics):
-                x_pos = 0 - x_axis[int(len(x_axis) * 0.055)]
-                y_pos = 180 - (j * 15)
+                x_pos = x_axis[int(len(x_axis) * 0.055)]
+                y_pos = 0.4 - (j * 0.15)
                 ax[i].text(
                     x_pos,
                     y_pos,
@@ -221,30 +221,30 @@ class PPG2ECG_Visual:
             return wandb.Image(fig, caption)
         return fig
 
-    def plot_bland_altman(self, ecg_type):
-        """plot_bland_altman
-            Formulating inputs based on object variable;
-            Calling the external function;
-            Returning the constructed dictionary of information
+    # def plot_bland_altman(self, ecg_type):
+    #     """plot_bland_altman
+    #         Formulating inputs based on object variable;
+    #         Calling the external function;
+    #         Returning the constructed dictionary of information
 
-        Arguments:
-            ecg_type {str} -- whether to construct input for ABP, SBP, or DBP
+    #     Arguments:
+    #         ecg_type {str} -- whether to construct input for ABP, SBP, or DBP
 
-        Returns:
-            dict -- returning a dictionary containing desired visuliazation
-        """
-        bp_key = ecg_type.upper()
-        fig, rmse, mae, mean, std, rval, pval = plot_bland_altman(
-            pred_arr=self.pred_dict[bp_key],
-            test_arr=self.test_dict[bp_key],
-            title=f"{self.bp_dict[bp_key]} Bland Altman for\nPatient: {self.patient_name}",
-            ecg_type=bp_key,
-            return_plt=True,
-        )
-        fig = self.fig_to_wandb_image(
-            fig, caption=f"{self.bp_dict[bp_key]}_Bland_Altman"
-        )
-        return form_dict(bp_key, fig, rmse, mae, mean, std, rval, pval)
+    #     Returns:
+    #         dict -- returning a dictionary containing desired visuliazation
+    #     """
+    #     bp_key = ecg_type.upper()
+    #     fig, rmse, mae, mean, std, rval, pval = plot_bland_altman(
+    #         pred_arr=self.pred_dict[bp_key],
+    #         test_arr=self.test_dict[bp_key],
+    #         title=f"{self.bp_dict[bp_key]} Bland Altman for\nPatient: {self.patient_name}",
+    #         ecg_type=bp_key,
+    #         return_plt=True,
+    #     )
+    #     fig = self.fig_to_wandb_image(
+    #         fig, caption=f"{self.bp_dict[bp_key]}_Bland_Altman"
+    #     )
+    #     return form_dict(bp_key, fig, rmse, mae, mean, std, rval, pval)
 
     def plot_Prediction(
         self, ecg_type, vis_st_idx=0, vis_seq_len=1250, add_metrics=False
@@ -335,30 +335,6 @@ class PPG2ECG_Visual:
         )
         return {f"{bp_key}_Three_Waveform": wave_fig}
 
-    def plot_confusion_matrix(self, ecg_type):
-        """plot_confusion_matrix
-            Formulating inputs based on object variable;
-            Calling the external function;
-            Returning the constructed dictionary of information
-
-        Arguments:
-            ecg_type {str} -- whether to construct input for ABP, SBP, or DBP
-
-        Returns:
-            dict -- returning a dictionary containing desired visuliazation
-        """
-        bp_key = ecg_type.upper()
-        cf_fig = confusion_matrix_of_stages(
-            pred_arr=self.pred_dict[bp_key],
-            test_arr=self.test_dict[bp_key],
-            ecg_type=bp_key,
-            pname=f"{self.patient_name}",
-        )
-        cf_fig = self.fig_to_wandb_image(
-            cf_fig, caption=f"{self.bp_dict[bp_key]}_Confusion_Matrix"
-        )
-        return {f"{bp_key}_Confusion_Matrix": cf_fig}
-
     def plot_everything(self):
         """plot_everything
             Plotting all of Bland Altman, Waveform, and Confusion Matrix Plots
@@ -369,17 +345,9 @@ class PPG2ECG_Visual:
         """
         # adding plot_waveform
         self.PPG2ECG_Visual_dict.update(self.plot_Prediction("ecg", add_metrics=True))
-        # self.PPG2ECG_Visual_dict.update(self.plot_Prediction("sbp", add_metrics=True))
-        # self.PPG2ECG_Visual_dict.update(self.plot_Prediction("dbp", add_metrics=True))
         self.PPG2ECG_Visual_dict.update(
             self.plot_three_Predictions("ecg", add_metrics=True)
         )
-        # adding bland altman
-        # self.PPG2ECG_Visual_dict.update(self.plot_bland_altman("sbp"))
-        # self.PPG2ECG_Visual_dict.update(self.plot_bland_altman("dbp"))
-        # adding confusion matrix
-        # self.PPG2ECG_Visual_dict.update(self.plot_confusion_matrix("sbp"))
-        # self.PPG2ECG_Visual_dict.update(self.plot_confusion_matrix("dbp"))
         return self.PPG2ECG_Visual_dict
 
 
