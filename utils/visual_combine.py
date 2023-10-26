@@ -81,7 +81,7 @@ def plot_waveform(
         ]
         for i, t in enumerate(local_metrics):
             x_pos = int(x_axis[-1] * 0.95)
-            y_pos = 1 - (i * 0.1)
+            y_pos = max(pred_arr) - (i * 0.01)
             ax.text(x_pos, y_pos, t, color="k", fontsize=10)
     ax.set_xlabel(x_lab)
     ax.set_ylabel(y_lab)
@@ -146,22 +146,22 @@ def plot_three_waveform(
                 f"mean={mean:.3f}",
                 f"std={std:.3f}",
             ]
-            for j, t in enumerate(local_metrics):
-                x_pos = 0 - x_axis[int(len(x_axis) * 0.055)]
-                y_pos = 0.4 - (j * 0.15)
-                ax[i].text(
-                    x_pos,
-                    y_pos,
-                    t,
-                    color="k",
-                    fontdict={
-                        "size": 10,
-                        "family": "monospace",
-                    },
-                )
+            x_pos = 0 - x_axis[int(len(x_axis) * 0.055)]
+            y_pos = min(pred_arr)
+            annot_text = "".join([f"{lm}\n" for lm in local_metrics])
+            ax[i].text(
+                x_pos,
+                y_pos,
+                annot_text,
+                color="k",
+                fontdict={
+                    "size": 10,
+                    "family": "monospace",
+                },
+            )
     fig.supxlabel(x_lab)
     fig.supylabel(y_lab)
-    ax[0].legend(loc=1)
+    ax[-1].legend(loc=1)
     fig.set_size_inches(18, 9)
     fig.set_dpi(75)
     plt.close()
@@ -307,8 +307,8 @@ class PPG2ECG_Visual:
             dict -- returning a dictionary containing desired visuliazation
         """
         ecg_key = ecg_type.upper()
-        x_lab = "Time (seconds)" if ecg_key == "ABP" else "Data Points (# of Samples)"
-        freq = self.freq if ecg_key == "ABP" else 1
+        x_lab = "Time (seconds)" if ecg_key == "ECG" else "Data Points (# of Samples)"
+        freq = self.freq if ecg_key == "ECG" else 1
         pred_list = []
         test_list = []
         vis_seq_len = min(vis_seq_len, int(len(self.pred_dict[ecg_key]) / 3))
