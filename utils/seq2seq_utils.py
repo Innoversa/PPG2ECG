@@ -225,6 +225,9 @@ def MIMIC_dataloader(flags: argparse.Namespace, override_sel_subject=None):
             X_data, y_data = make_batched_data(batched_arr, flags)
         X_data = torch.from_numpy(X_data).float()
         y_data = torch.from_numpy(y_data).float()
+        if len(X_data.shape) == 2:
+            X_data = X_data.reshape(len(X_data), 1, -1)
+            y_data = y_data.reshape(len(y_data), 1, -1)
         print(pretty_progress_bar("Saving processed Waveforms as torch files"))
         torch.save(
             X_data, f"{flags.rex_torch_path}mimic_patient_{flags.subject_id}_ppg.pt"
