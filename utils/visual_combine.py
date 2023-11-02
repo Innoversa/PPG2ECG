@@ -85,7 +85,7 @@ def plot_waveform(
             ax.text(x_pos, y_pos, t, color="k", fontsize=10)
     ax.set_xlabel(x_lab)
     ax.set_ylabel(y_lab)
-    ax.legend(loc=1)
+    ax.legend(loc=4)
     fig.set_size_inches(10, 7)
     fig.set_dpi(75)
     plt.close()
